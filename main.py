@@ -2,79 +2,80 @@ from typing import Optional
 from hdwallet import BIP44HDWallet
 from hdwallet.cryptocurrencies import EthereumMainnet
 from hdwallet.derivations import BIP44Derivation
-from hdwallet.utils import generate_mnemonic
+from concurrent.futures import ProcessPoolExecutor
+from mnemonic import Mnemonic
 import time
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+import multiprocessing
 
-target_zeros = int(input('\nEnter number of zeros after "0x" : ')) # Number of 0 after 0x
-n_wallets = int(input("Enter number of wallets : ")) # Number of wallets
-print()
 
-def generate_evm_wallet(target_zeros, n_wallets):
+def generate_wallet(target_zeros, total_wallets, wallets):
+    mnemo = Mnemonic("english")
 
-    wallets = {
-        'mnemonics' : [],
-        'addresses' : [],
-        'keys' : [],
-    }
-
-    for i in range(n_wallets):
-
+    while len(wallets["addresses"]) < total_wallets:
         start = time.perf_counter()
 
-        while True:
+        MNEMONIC: str = mnemo.generate(strength=128)
+        PASSPHRASE: Optional[str] = None
 
-            # Generate english mnemonic words
-            MNEMONIC: str = generate_mnemonic(language="english", strength=128)
-            # Secret passphrase/password for mnemonic
-            PASSPHRASE: Optional[str] = None  # "meherett"
+        bip44_hdwallet: BIP44HDWallet = BIP44HDWallet(cryptocurrency=EthereumMainnet)
+        bip44_hdwallet.from_mnemonic(
+            mnemonic=MNEMONIC, language="english", passphrase=PASSPHRASE
+        )
 
-            # Initialize Ethereum mainnet BIP44HDWallet
-            bip44_hdwallet: BIP44HDWallet = BIP44HDWallet(cryptocurrency=EthereumMainnet)
-            # Get Ethereum BIP44HDWallet from mnemonic
-            bip44_hdwallet.from_mnemonic(
-                mnemonic=MNEMONIC, language="english", passphrase=PASSPHRASE
-            )
-            # Clean default BIP44 derivation indexes/paths
-            bip44_hdwallet.clean_derivation()
-            mnemonics = bip44_hdwallet.mnemonic()
+        bip44_derivation: BIP44Derivation = BIP44Derivation(
+            cryptocurrency=EthereumMainnet, account=0, change=False, address=0
+        )
+        bip44_hdwallet.from_path(path=bip44_derivation)
+        address = bip44_hdwallet.address()
+        print(address)
+        key = bip44_hdwallet.private_key()
+        bip44_hdwallet.clean_derivation()
 
-            # Derivation from Ethereum BIP44 derivation path
-            bip44_derivation: BIP44Derivation = BIP44Derivation(
-                cryptocurrency=EthereumMainnet, account=0, change=False, address=0
-            )
-            # Drive Ethereum BIP44HDWallet
-            bip44_hdwallet.from_path(path=bip44_derivation)
-            # Print address_index, path, address and private_key
-            address = bip44_hdwallet.address()
-            key = bip44_hdwallet.private_key()
-            # Clean derivation indexes/paths
-            bip44_hdwallet.clean_derivation() 
+        address_hash = hashes.Hash(hashes.SHA256(), backend=default_backend())
+        address_hash.update(address.encode('utf-8'))
+        address_hash_digest = address_hash.finalize()
 
-            if address.startswith("0x" + "0" * target_zeros):
+        if address_hash_digest.startswith(b'\x00' * target_zeros):
+            with wallets.get_lock():
                 print(f'{address} : {int((time.perf_counter() - start))} sec.')
-                wallets["mnemonics"].append(mnemonics)
+                wallets["mnemonics"].append(MNEMONIC)
                 wallets["addresses"].append(address)
                 wallets["keys"].append(f'{key}')
-                break
 
-    file_keys = open(f"key.txt", "w")
-    file_addr = open(f"address.txt", "w")
-    file_seed = open(f"seed.txt", "w")
 
-    for x in wallets["mnemonics"]:
-        file_seed.write(f'{str(x)}\n')
+def main():
+    print('\t\t25k wallets in 1m30s')
+    title = "tg: @fraggdiller / @retrodropTools"
+    print("╔" + "═" * 36 + "╗")
+    print("║" + title.center(36) + "║")
+    print("╚" + "═" * 36 + "╝")
+    target_zeros = int(input('\nEnter number of zeros after "0x" : '))  # Number of 0 after 0x
+    n_wallets = int(input("Enter number of wallets : "))  # Number of wallets
+    print()
 
-    for x in wallets["addresses"]:
-        file_addr.write(f'{str(x)}\n')
+    manager = multiprocessing.Manager()
+    wallets = manager.dict()
+    wallets["mnemonics"] = manager.list()
+    wallets["addresses"] = manager.list()
+    wallets["keys"] = manager.list()
 
-    for x in wallets["keys"]:
-        file_keys.write(f'0x{str(x)}\n')
+    with ProcessPoolExecutor() as executor:
+        futures = [executor.submit(generate_wallet, target_zeros, n_wallets, wallets) for _ in range(10)]
 
-    file_keys.close()
-    file_addr.close()
-    file_seed.close()
+    with open("key.txt", "w") as file_keys, open("address.txt", "w") as file_addr, open("seed.txt", "w") as file_seed:
+        for x in wallets["mnemonics"]:
+            file_seed.write(f'{str(x)}\n')
+
+        for x in wallets["addresses"]:
+            file_addr.write(f'{str(x)}\n')
+
+        for x in wallets["keys"]:
+            file_keys.write(f'0x{str(x)}\n')
 
     print(f'\nThe result is written to key.txt address.txt seed.txt')
 
+
 if __name__ == "__main__":
-    generate_evm_wallet(target_zeros, n_wallets)
+    main()

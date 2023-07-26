@@ -7,6 +7,10 @@
 3. В терминале пишем сколько хотим нулей и кол-во кошельков. 
 4. Сид фраза, приватник и адрес будут записаны в txt файлы.
 
+Author: 
+
 Donate (evm) : `0xb7415DB78c886c67DBfB25D3Eb7fcd496dAf9021` or `donates-for-hodlmod.eth`
 
 Паблик : https://t.me/hodlmodeth. [ code ] чат : https://t.me/code_hodlmodeth. Канал с обновлениями и лайф-рофл-контентом : https://t.me/never_broke_again_v1
+
+Optimisation by: https://t.me/fraggdiller. [channel] : https://t.me/retrodropTools
