@@ -38,8 +38,6 @@ def generate_evm_wallet(target_zeros, n_wallets):
             bip44_hdwallet.clean_derivation()
             mnemonics = bip44_hdwallet.mnemonic()
 
-            # Get Ethereum BIP44HDWallet information's from address index
-
             # Derivation from Ethereum BIP44 derivation path
             bip44_derivation: BIP44Derivation = BIP44Derivation(
                 cryptocurrency=EthereumMainnet, account=0, change=False, address=0
