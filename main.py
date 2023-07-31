@@ -46,11 +46,6 @@ def generate_wallet(target_zeros, total_wallets, wallets):
 
 
 def main():
-    print('\t\t25k wallets in 1m30s')
-    title = "tg: @fraggdiller / @retrodropTools"
-    print("╔" + "═" * 36 + "╗")
-    print("║" + title.center(36) + "║")
-    print("╚" + "═" * 36 + "╝")
     target_zeros = int(input('\nEnter number of zeros after "0x" : '))  # Number of 0 after 0x
     n_wallets = int(input("Enter number of wallets : "))  # Number of wallets
     print()
